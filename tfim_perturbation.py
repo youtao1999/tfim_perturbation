@@ -69,7 +69,7 @@ def H_app_1(basis, GS_indices, N):
     
     # First-Order term in perturbation theory
     V = np.zeros((len(GS_indices), len(GS_indices)))
-
+    
     for column, ket in enumerate(GS_indices):
         state = basis.state(ket)
         for i in range(N):
@@ -83,10 +83,9 @@ def H_app_1(basis, GS_indices, N):
     return V
 
 def H_app_2(basis, Jij, GS_indices, N, GS_energy):
-    
     # Second-Order term in perturbation theory
-    H_2 = np.zeros((len(GS_indices), len(GS_indices)))
-
+    H_app_2 = np.zeros((len(GS_indices), len(GS_indices)))
+    
     for column, GS_ket_1 in enumerate(GS_indices):
         state_1 = basis.state(GS_ket_1)
         for i in range(N):
@@ -100,18 +99,18 @@ def H_app_2(basis, Jij, GS_indices, N, GS_energy):
                     GS_2_index = np.argwhere(np.array(GS_indices) == ES_2_flipped_index)
                     if len(GS_2_index) > 0:
                         row = GS_2_index[0][0]
-                        H_2[row, column] += 1/energy_gap
+                        H_app_2[row, column] -= 1/energy_gap
                     basis.flip(state_1, j)
             basis.flip(state_1, i)
-    return H_2
+    return H_app_2
 
 def H_app(h_x, H_0, V, H_2, J):
     # Calculate final approximated matrix
-    return H_0 - h_x*V + H_2*(h_x**2/J)
-    
-def V_exact(basis):
+    c = h_x**2/J
+    return H_0 - h_x*V + H_2*c
+
+def V_exact(basis, lattice):
     V_exact = np.zeros((basis.M, basis.M))
-    
     for ket in range(basis.M):
         state = basis.state(ket)
         for i in range(lattice.N):
@@ -120,7 +119,7 @@ def V_exact(basis):
             V_exact[bra, ket] += 1
             basis.flip(state,i)
     return V_exact
-    
+
 def H_0_exact(Energies):
     return np.diag(Energies)
 
@@ -130,27 +129,31 @@ def H_exact(h_x, V_exact, H_0_exact):
 
 ###############################################################################
 
-def app_eigensystem(GS_indices, h_x_range, H_app_0, H_app_1, H_app_2):
+def app_eigensystem(GS_indices, GS_energy, h_x_range, J, N, basis, Jij):
     # Calculate approximated eigenvalues and eigenstates for range(h_x)
-
     app_eigenvalues = np.zeros((len(GS_indices), len(h_x_range)))
     app_eigenstates = np.zeros((len(h_x_range), len(GS_indices), len(GS_indices)))
-
+    
+    H_0 = H_app_0(GS_energy, GS_indices)
+    V = H_app_1(basis, GS_indices, N)
+    H_2 = H_app_2(basis, Jij, GS_indices, N, GS_energy)
+    
     for j, h_x in enumerate(h_x_range):
-        app_eigenvalue, app_eigenstate = np.linalg.eigh(tfim_perturbation.H_app(h_x, H_0, V, H_2, J));
+        app_eigenvalue, app_eigenstate = np.linalg.eigh(H_app(h_x, H_0, V, H_2, J));
         for i in range(len(GS_indices)):
             app_eigenvalues[i][j] = app_eigenvalue[i]
             for k in range(len(GS_indices)):
                 app_eigenstates[j][i][k] = app_eigenstate[i][k]
     return app_eigenvalues, app_eigenstates
 
-def exc_eigensystem(basis, h_x_range, V_exact, H_0_exact):
+def exc_eigensystem(basis, h_x_range, lattice, Energies):
     # Calculate exact eigenvalues and eigenstates for range(h_x)
     exc_eigenvalues = np.zeros((basis.M, len(h_x_range)))
     exc_eigenstates = np.zeros((len(h_x_range), basis.M, basis.M))
-
+    V_exc = V_exact(basis, lattice)
+    H_0_exc = H_0_exact(Energies)
     for j, h_x in enumerate(h_x_range):
-        exc_eigenvalue, exc_eigenstate = np.linalg.eigh(tfim_perturbation.H_exact(h_x, V_exact, H_0_exact));
+        exc_eigenvalue, exc_eigenstate = np.linalg.eigh(H_exact(h_x, V_exc, H_0_exc));
         for i in range(basis.M):
             exc_eigenvalues[i][j] = exc_eigenvalue[i]
             for k in range(basis.M):
@@ -159,6 +162,8 @@ def exc_eigensystem(basis, h_x_range, V_exact, H_0_exact):
 
 ###############################################################################
 # For error analysis and curve fit
+def poly_4(x, b, c):
+    return b*x**3 + c*x**4;
 
 def poly_3(x, b):
     # third order polynomial
@@ -173,16 +178,16 @@ def prob(eigenstate):
     normed_eigenstate = eigenstate/(norm**0.5)
     return np.conjugate(normed_eigenstate)*normed_eigenstate
 
-def pro_app(GS_indices, h_x_range, app_eigenstates):
+def prob_app(GS_indices, h_x_range, app_eigenstates):
     # Calculate probabilities for approximated eigenstates
     prob_app = np.zeros((len(GS_indices), len(h_x_range),))
     for j, h_x in enumerate(h_x_range):
-        GS_prob_vector = tfim_perturbation.prob(app_eigenstates[j][:, 0])
+        GS_prob_vector = prob(app_eigenstates[j][:, 0])
         for i in range(len(GS_indices)):
             prob_app[i][j] = GS_prob_vector[i]
     return prob_app
 
-def prob_exc(GS_indices, h_x_range, exc_eigenstates)
+def prob_exc(GS_indices, h_x_range, exc_eigenstates):
     # Calculate probabilities for exact eigenstates
     prob_exc = np.zeros((len(GS_indices), len(h_x_range),))
     for j, h_x in enumerate(h_x_range):
@@ -214,19 +219,21 @@ def normalize(eigenstate):
     norm = np.vdot(eigenstate, eigenstate)**0.5
     return eigenstate/norm
 
-def normalized_GS_exc_eigenstates(GS_indices, h_x_range, exc_eigenstates):
-    # extract GS from exact matrix and renormalize
+def GS_exc_eigenstates(GS_indices, h_x_range, exc_eigenstates):
     GS_exc_eigenstates = np.zeros((len(h_x_range), len(GS_indices), len(GS_indices)))
-    normalized_GS_exc_eigenstates = np.zeros((len(h_x_range), len(GS_indices), len(GS_indices)))
-
     for j in range(len(h_x_range)):
         for n, m in enumerate(GS_indices):
             for i, k in enumerate(GS_indices):
                 GS_exc_eigenstates[j, n, i] = exc_eigenstates[j, m, i]
+    return GS_exc_eigenstates
 
+def norm_GS_exc_eigenstates(GS_indices, h_x_range, exc_eigenstates):
+    # Renormalize
+    normalized_GS_exc_eigenstates = np.zeros((len(h_x_range), len(GS_indices), len(GS_indices)))
+    GS_exc_ES = GS_exc_eigenstates(GS_indices, h_x_range, exc_eigenstates)
     for j in range(len(h_x_range)):
         for n in range(len(GS_indices)):
-            normed_vector = normalize(GS_exc_eigenstates[j, :, n])
+            normed_vector = normalize(GS_exc_ES[j, :, n])
             for i in range(len(GS_indices)):
                 normalized_GS_exc_eigenstates[j, i, n] = normed_vector[i]
     return normalized_GS_exc_eigenstates
@@ -250,9 +257,10 @@ def sort(lst):
     order.append(floor)
     return list(order) 
 
-def fidelity_array(GS_indices, h_x_range, GS_exc_eigenvalues, app_eigenvalues):
+def fidelity_array(GS_indices, h_x_range, GS_exc_eigenvalues, app_eigenvalues, exc_eigenstates, app_eigenstates):
     # Produce an array of fidelities between exc and app to be plotted
     fidelity_array = np.zeros((len(GS_indices), len(h_x_range)))
+    GS_exc_ES = GS_exc_eigenstates(GS_indices, h_x_range, exc_eigenstates)
     for i in range(len(h_x_range)):
         sorted_exc_energy_indices = sort(GS_exc_eigenvalues[:, i])
         sorted_app_energy_indices = sort(app_eigenvalues[:, i])
@@ -260,7 +268,7 @@ def fidelity_array(GS_indices, h_x_range, GS_exc_eigenvalues, app_eigenvalues):
             for j in app_level:
                 fidel_sum = 0;
                 for k in sorted_exc_energy_indices[l]:
-                    fidel = fidelity(GS_exc_eigenstates[i, :, k], app_eigenstates[i, :, j])
+                    fidel = fidelity(GS_exc_ES[i, :, k], app_eigenstates[i, :, j])
                     fidel_sum += fidel
                 fidelity_array[j, i] = fidel_sum
     return fidelity_array

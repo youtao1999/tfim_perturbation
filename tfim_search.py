@@ -64,7 +64,7 @@ def main():
     indices_array = []
 
     for Jij in Jij_array:
-        Energies = tfim.JZZ_SK_ME(basis,Jij) # Why was there a minus sign?
+        Energies = -tfim.JZZ_SK_ME(basis,Jij) # Why was there a minus sign?
         GS_energy = np.min(Energies)
         GS_indices = np.nonzero(Energies == GS_energy)[0]
         indices_array.append(GS_indices)
