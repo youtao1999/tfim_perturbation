@@ -170,7 +170,7 @@ def H_app_3(basis, Jij, GS_indices, N, GS_energy):
                             GS_3_index = np.argwhere(np.array(GS_indices) == state_3_index)
                             if len(GS_3_index) > 0:
                                 row = GS_3_index[0][0]
-                                H_app_3[row, column] -= 1.0/(energy_gap_1*energy_gap_2)
+                                H_app_3[row, column] += 1.0/(energy_gap_1*energy_gap_2)
                                 #H_app_3[row, column] -= 1
                             basis.flip(state_0, k)
                     basis.flip(state_0, j)
