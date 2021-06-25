@@ -24,8 +24,8 @@ Jij = tfim.Jij_instance(N,J,"bimodal",Jij_seed)
 
 # List out all the spin_states, corresponding indices and energies
 Energies = -tfim.JZZ_SK_ME(basis,Jij)
-for index in range(2**N):
-    print(index, basis.state(index), Energies[index])
+# for index in range(2**N):
+#     print(index, basis.state(index), Energies[index])
 
 #construct random J matrix
 Jij = tfim.Jij_instance(N,J,"bimodal",Jij_seed)
@@ -73,20 +73,20 @@ def err(par0, par1):
     # alpha is the fitting parameter for the 3rd order polynomial
     error_arr = np.zeros(np.shape(h_x_range))
     for i, h_x in enumerate(h_x_range):
-        H_app = H_app_0 + h_x*H_app_1 + np.power(2., h_x)*H_app_2_param(basis, Jij, GS_indices, N, GS_energy, param)
+        H_app = H_app_0 + h_x*H_app_1 + np.power(h_x, 2.)*H_app_2_param(basis, Jij, GS_indices, N, GS_energy, param)
         # Calculate the energy eigenvalue of the approximated 2nd order matrix
         app_eigenvalues, app_eigenstates = eigh(H_app)
         app_GS_eigenvalue = min(app_eigenvalues)
         # Calculate exact eigenvalues and eigenstates for range(h_x)
         exc_eigenvalues, exc_eigenstates = tfim_perturbation.exc_eigensystem(basis, h_x_range, lattice, Energies)
         exc_GS_eigenvalue = min(exc_eigenvalues[:,i])
-        error_arr[i] = abs(app_GS_eigenvalue-exc_GS_eigenvalue) - alpha*np.power(2., h_x)
-    return np.sqrt(sum(np.power(2., error_arr)))
+        error_arr[i] = abs(abs(app_GS_eigenvalue-exc_GS_eigenvalue) - alpha*np.power(h_x, 3.))
+    return np.sqrt(sum(np.power(error_arr, 2.)))
 
 # Perform optimization
-m = Minuit(err, par0=0.5, par1=0.14)
-m.errors['par0'] = 0.1
-m.errors['par1'] = 0.1
+m = Minuit(err, par0=0.5, par1=0.2)
+m.errors['par0'] = 0.001
+m.errors['par1'] = 0.001
 m.limits['par0'] = (-1., 1.)
 m.limits['par1'] = (0., 1.)
 m.errordef = 1

@@ -101,7 +101,7 @@ def H_app_2(basis, Jij, GS_indices, N, GS_energy):
                     GS_2_index = np.argwhere(np.array(GS_indices) == ES_2_flipped_index)
                     if len(GS_2_index) > 0:
                         row = GS_2_index[0][0]
-                        H_app_2[row, column] -= 1/energy_gap
+                        H_app_2[row, column] -= 1./energy_gap
                     basis.flip(state_1, j)
             basis.flip(state_1, i)
     return H_app_2
@@ -127,7 +127,7 @@ def H_app_3(basis, Jij, GS_indices, N, GS_energy):
                             GS_3_index = np.argwhere(np.array(GS_indices) == state_3_index)
                             if len(GS_3_index) > 0:
                                 row = GS_3_index[0][0]
-                                H_app_3[row, column] -= -0.5/energy_gap**2
+                                H_app_3[row, column] -= -0.5/(energy_gap**2)
                                 #H_app_3[row, column] -= 2.5
                             basis.flip(state_0, k)
                     basis.flip(state_0, j)
@@ -148,7 +148,7 @@ def H_app_3(basis, Jij, GS_indices, N, GS_energy):
                             GS_3_index = np.argwhere(np.array(GS_indices) == state_3_index)
                             if len(GS_3_index) > 0:
                                 row = GS_3_index[0][0]
-                                H_app_3[row, column] -= -0.5/energy_gap**2
+                                H_app_3[row, column] -= -0.5/(energy_gap**2)
                                 #H_app_3[row, column] -= 2.5
                             basis.flip(state_0, k)
                     basis.flip(state_0, j)
@@ -170,7 +170,7 @@ def H_app_3(basis, Jij, GS_indices, N, GS_energy):
                             GS_3_index = np.argwhere(np.array(GS_indices) == state_3_index)
                             if len(GS_3_index) > 0:
                                 row = GS_3_index[0][0]
-                                H_app_3[row, column] += 1.0/(energy_gap_1*energy_gap_2)
+                                H_app_3[row, column] -= 1.0/(energy_gap_1*energy_gap_2)
                                 #H_app_3[row, column] -= 1
                             basis.flip(state_0, k)
                     basis.flip(state_0, j)
