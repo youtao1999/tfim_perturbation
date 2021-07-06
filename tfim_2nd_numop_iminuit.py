@@ -5,9 +5,9 @@ import tfim
 import tfim_perturbation
 
 # Initial system specification
-L = [4]
+L = [3]
 Jij_seed = 19
-h_x_range = np.arange(0, 0.01, 0.0002)
+h_x_range = np.arange(0, 0.001, 0.00002)
 
 PBC = True
 J = 1
