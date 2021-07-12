@@ -96,11 +96,11 @@ def err(x):
     # print(error_arr)
     return np.sqrt(sum(np.power(error_arr, 2.)))
 
-# # Perform optimization
-# x_0 = [100., 100.]
-# res = minimize(err, x_0, method = 'Nelder-Mead')
-# # print("optimized perturbation parameter: ", res.x[0], "optimized curve fitting parameter: ", res.x[1])
-# print(res.x)
+# Perform optimization
+x_0 = [1., 1.]
+res = minimize(err, x_0, method='nelder-mead', options={'xatol': 1e-8, 'disp': True})
+# print("optimized perturbation parameter: ", res.x[0], "optimized curve fitting parameter: ", res.x[1])
+print(res.x)
 
 # # Fixed alpha and plot error function
 # length = 100

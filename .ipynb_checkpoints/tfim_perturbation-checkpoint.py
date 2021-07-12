@@ -180,22 +180,20 @@ def H_app_3(basis, Jij, GS_indices, N, GS_energy):
 def H_app_2nd(h_x, H_0, V, H_2, J):
     # Calculate final 2nd order approximated matrix
     c_2 = h_x**2
-    return H_0 - h_x*V + H_2*c_2
+    return H_0 - h_x*V - H_2*c_2
 
 def H_app_3rd(h_x, H_0, V, H_2, H_3, J):
     # Calculate final 3rd approximated matrix
     c_2 = h_x**2
     c_3 = h_x**3
-    #print(H_0 - h_x*V + H_2*c_2 + H_3*c_3)
-    return H_0 - h_x*V + H_2*c_2 - H_3*c_3
+    return H_0 - h_x*V - H_2*c_2 - H_3*c_3
 
 def H_app_4th(h_x, H_0, V, H_2, H_3, H_4, J):
     # Calculate final 3rd approximated matrix
     c_2 = h_x**2
     c_3 = h_x**3
     c_4 = h_x**4
-    print(H_0 - h_x*V + H_2*c_2 + H_3*c_3)
-    return H_0 - h_x*V + H_2*c_2 + H_3*c_3 # + H_4*c_4
+    return H_0 - h_x*V - H_2*c_2 - H_3*c_3 - H_4*c_4
 
 def V_exact(basis, lattice):
     V_exact = np.zeros((basis.M, basis.M))
@@ -348,7 +346,7 @@ def app_4_eigensystem_general_matrices(GS_indices, GS_energy, h_x_range, J, N, b
 
     H_app_3 = -0.5*PVP @ PVQ1 @ EGM_12 @ Q1VP + PVQ1 @ EGM_11 @ Q1VQ1 @ EGM_11 @ Q1VP - 0.5*PVQ1 @ EGM_12 @ Q1VP @ PVP
 
-    H_app_4 = 0.5*PVQ1 @ EGM_13 @ Q1VP @ PVP @ PVP + 0.5*np.transpose(PVQ1 @ EGM_13 @ Q1VP @ PVP @ PVP) + 1.5*(PVQ1 @ EGM_12 @ Q1VP @ PVQ1 @ EGM_11 @ Q1VP + np.transpose(PVQ1 @ EGM_13 @ Q1VP @ PVP @ PVP)) + 2*(PVQ1 @ EGM_11 @ Q1VQ1 @ EGM_12 @ Q1VP @ PVP + np.transpose(PVQ1 @ EGM_11 @ Q1VQ1 @ EGM_12 @ Q1VP @ PVP)) + 1.5*(PVP @ PVQ1 @ EGM_11 @ Q1VQ1 @ EGM_12 @ Q1VP + np.transpose(PVP @ PVQ1 @ EGM_11 @ Q1VQ1 @ EGM_12 @ Q1VP)) + 5*(PVQ1 @ EGM_11 @ Q1VQ2 @ EGM_21 @ Q2VQ1 @ EGM_11 @ Q1VP)
+    H_app_4 = 0.5*PVQ1 @ EGM_13 @ Q1VP @ PVP @ PVP + 0.5*np.transpose(PVQ1 @ EGM_13 @ Q1VP @ PVP @ PVP) + 1.5*(PVQ1 @ EGM_12 @ Q1VP @ PVQ1 @ EGM_11 @ Q1VP + np.transpose(PVQ1 @ EGM_13 @ Q1VP @ PVP @ PVP)) + 2.*(PVQ1 @ EGM_11 @ Q1VQ1 @ EGM_12 @ Q1VP @ PVP + np.transpose(PVQ1 @ EGM_11 @ Q1VQ1 @ EGM_12 @ Q1VP @ PVP)) + 1.5*(PVP @ PVQ1 @ EGM_11 @ Q1VQ1 @ EGM_12 @ Q1VP + np.transpose(PVP @ PVQ1 @ EGM_11 @ Q1VQ1 @ EGM_12 @ Q1VP)) + 5.*(PVQ1 @ EGM_11 @ Q1VQ2 @ EGM_21 @ Q2VQ1 @ EGM_11 @ Q1VP)
 
     for j, h_x in enumerate(h_x_range):
         app_eigenvalue, app_eigenstate = eigh(H_app_4th(h_x, H_0, H_app_1, H_app_2, H_app_3, H_app_4, J));
