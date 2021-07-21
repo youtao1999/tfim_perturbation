@@ -64,7 +64,7 @@ def Q_1VQ_1(basis, ES_1_indices, GS_indices, N):
             basis.flip(state, i)
             bra = basis.index(state)
             subspace_index = np.argwhere(ES_1_indices == bra)
-            if len(subspace_index) > 0 and subspace_index not in GS_indices:
+            if len(subspace_index) > 0 and ES_1_indices[subspace_index] not in GS_indices:
                 row = subspace_index[0][0]
                 QVQ[row, column] += 1
             basis.flip(state,i)
@@ -83,7 +83,7 @@ def Q_1VQ_2(basis, ES_1_indices, ES_2_indices, GS_indices, N):
             basis.flip(state, i)
             bra = basis.index(state)
             subspace_index = np.argwhere(ES_1_indices == bra)
-            if len(subspace_index) > 0 and subspace_index not in GS_indices:
+            if len(subspace_index) > 0 and ES_1_indices[subspace_index] not in GS_indices:
                 row = subspace_index[0][0]
                 QVQ[row, column] += 1
             basis.flip(state,i)
@@ -108,6 +108,6 @@ def energy_gap(basis, Jij, input_state_indices, N, GS_energy, exponent):
     # Input_state_indices is a 1D NumPy array of state indices that are a certain number of Hamming distances away from GS_indices: Q_1, Q_2... etc
     energy_gap_matrix = np.zeros((len(input_state_indices), len(input_state_indices)))
     for i,  state_index in enumerate(input_state_indices):
-        energy_gap = tfim_perturbation.state_energy(basis, Jij, state_index) - GS_energy
-        energy_gap_matrix[i, i] -= 1/(energy_gap**exponent)
+        energy_gap = GS_energy - tfim_perturbation.state_energy(basis, Jij, state_index)
+        energy_gap_matrix[i, i] += 1/(energy_gap**exponent)
     return energy_gap_matrix

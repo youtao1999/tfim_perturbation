@@ -120,58 +120,61 @@ def H_app_3(basis, Jij, GS_indices, N, GS_energy):
                     basis.flip(state_0, j)
                     state_2_index = basis.index(state_0)
                     if state_2_index not in GS_indices:
-                        energy_gap = state_energy(basis, Jij, state_2_index) - GS_energy
+                        energy_gap = GS_energy - state_energy(basis, Jij, state_2_index)
                         for k in range(N):
                             basis.flip(state_0, k)
                             state_3_index = basis.index(state_0)
                             GS_3_index = np.argwhere(np.array(GS_indices) == state_3_index)
                             if len(GS_3_index) > 0:
                                 row = GS_3_index[0][0]
-                                H_app_3[row, column] -= -0.5/(energy_gap**2)
-                                #H_app_3[row, column] -= 2.5
+                                H_app_3[row, column] += -0.5/(energy_gap**2)
                             basis.flip(state_0, k)
                     basis.flip(state_0, j)
             basis.flip(state_0, i)
-            
+    term_2 = np.transpose(H_app_3)
+    H_app_3 += term_2
+    
+#     for column, GS_bra_1 in enumerate(GS_indices):        
+#         state_0 = basis.state(GS_bra_1)
+#         for i in range(N):
+#             basis.flip(state_0, i)
+#             state_1_index = basis.index(state_0)
+#             if state_1_index not in GS_indices:
+#                 energy_gap = state_energy(basis, Jij, state_1_index) - GS_energy
+#                 for j in range(N):
+#                     basis.flip(state_0, j)
+#                     state_2_index = basis.index(state_0)
+#                     if state_2_index in GS_indices:
+#                         for k in range(N):
+#                             basis.flip(state_0, k)
+#                             state_3_index = basis.index(state_0)
+#                             GS_3_index = np.argwhere(np.array(GS_indices) == state_3_index)
+#                             if len(GS_3_index) > 0:
+#                                 row = GS_3_index[0][0]
+#                                 H_app_3[row, column] += -0.5/(energy_gap**2)
+#                             basis.flip(state_0, k)
+#                     basis.flip(state_0, j)
+#             basis.flip(state_0, i)
+
+    for column, GS_bra_1 in enumerate(GS_indices):
+        state_0 = basis.state(GS_bra_1)
         for i in range(N):
             basis.flip(state_0, i)
             state_1_index = basis.index(state_0)
             if state_1_index not in GS_indices:
-                energy_gap = state_energy(basis, Jij, state_1_index) - GS_energy
-                for j in range(N):
-                    basis.flip(state_0, j)
-                    state_2_index = basis.index(state_0)
-                    if state_2_index in GS_indices:
-                        for k in range(N):
-                            basis.flip(state_0, k)
-                            state_3_index = basis.index(state_0)
-                            GS_3_index = np.argwhere(np.array(GS_indices) == state_3_index)
-                            if len(GS_3_index) > 0:
-                                row = GS_3_index[0][0]
-                                H_app_3[row, column] -= -0.5/(energy_gap**2)
-                                #H_app_3[row, column] -= 2.5
-                            basis.flip(state_0, k)
-                    basis.flip(state_0, j)
-            basis.flip(state_0, i)
-        
-        for i in range(N):
-            basis.flip(state_0, i)
-            state_1_index = basis.index(state_0)
-            if state_1_index not in GS_indices:
-                energy_gap_1 = state_energy(basis, Jij, state_1_index) - GS_energy
+                energy_gap_1 = GS_energy - state_energy(basis, Jij, state_1_index)
                 for j in range(N):
                     basis.flip(state_0, j)
                     state_2_index = basis.index(state_0)
                     if state_2_index not in GS_indices:
-                        energy_gap_2 = state_energy(basis, Jij, state_2_index) - GS_energy
+                        energy_gap_2 = GS_energy - state_energy(basis, Jij, state_2_index)
                         for k in range(N):
                             basis.flip(state_0, k)
                             state_3_index = basis.index(state_0)
                             GS_3_index = np.argwhere(np.array(GS_indices) == state_3_index)
                             if len(GS_3_index) > 0:
                                 row = GS_3_index[0][0]
-                                H_app_3[row, column] -= 1.0/(energy_gap_1*energy_gap_2)
-                                #H_app_3[row, column] -= 1
+                                H_app_3[row, column] += 1.0/(energy_gap_1*energy_gap_2)
                             basis.flip(state_0, k)
                     basis.flip(state_0, j)
             basis.flip(state_0, i)
@@ -180,20 +183,20 @@ def H_app_3(basis, Jij, GS_indices, N, GS_energy):
 def H_app_2nd(h_x, H_0, V, H_2, J):
     # Calculate final 2nd order approximated matrix
     c_2 = h_x**2
-    return H_0 - h_x*V - H_2*c_2
+    return H_0 - h_x*V + H_2*c_2
 
 def H_app_3rd(h_x, H_0, V, H_2, H_3, J):
     # Calculate final 3rd approximated matrix
     c_2 = h_x**2
     c_3 = h_x**3
-    return H_0 - h_x*V - H_2*c_2 - H_3*c_3
+    return H_0 - h_x*V + H_2*c_2 - H_3*c_3
 
 def H_app_4th(h_x, H_0, V, H_2, H_3, H_4, J):
     # Calculate final 3rd approximated matrix
     c_2 = h_x**2
     c_3 = h_x**3
     c_4 = h_x**4
-    return H_0 - h_x*V - H_2*c_2 - H_3*c_3 - H_4*c_4
+    return H_0 - h_x*V + H_2*c_2 - H_3*c_3 + H_4*c_4
 
 def V_exact(basis, lattice):
     V_exact = np.zeros((basis.M, basis.M))
@@ -283,7 +286,7 @@ def app_3_eigensystem_general_matrices(GS_indices, GS_energy, h_x_range, J, N, b
     app_eigenvalues = np.zeros((len(GS_indices), len(h_x_range)))
     app_eigenstates = np.zeros((len(h_x_range), len(GS_indices), len(GS_indices)))
     
-    # Building blocks matrices
+        # Building blocks matrices
     ES_1_indices = tfim_matrices.Hamming_set(basis, GS_indices, N, GS_indices)
     PVP = tfim_matrices.PVP(basis, GS_indices, N)
     PVQ1 = tfim_matrices.PVQ_1(basis, Jij, GS_indices, ES_1_indices, N, GS_energy)
@@ -294,17 +297,16 @@ def app_3_eigensystem_general_matrices(GS_indices, GS_energy, h_x_range, J, N, b
     EGM_12 = tfim_matrices.energy_gap(basis, Jij, ES_1_indices, N, GS_energy, 2)
     EGM_13 = tfim_matrices.energy_gap(basis, Jij, ES_1_indices, N, GS_energy, 3)
     EGM_11 = tfim_matrices.energy_gap(basis, Jij, ES_1_indices, N, GS_energy, 1)
-    
-    # Start building Hamiltonians
 
+    # Start building Hamiltonians
     H_0 = H_app_0(GS_energy, GS_indices)
 
     H_app_1 = PVP
 
     H_app_2 = PVQ1 @ EGM_11 @ Q1VP
 
-    H_app_3 = -0.5*PVP @ PVQ1 @ EGM_12 @ Q1VP + PVQ1 @ EGM_11 @ Q1VQ1 @ EGM_11 @ Q1VP - 0.5*PVQ1 @ EGM_12 @ Q1VP @ PVP
-
+    H_app_3 = -0.5*(PVP @ PVQ1 @ EGM_12 @ Q1VP + np.transpose(PVP @ PVQ1 @ EGM_12 @ Q1VP)) + PVQ1 @ EGM_11 @ Q1VQ1 @ EGM_11 @ Q1VP
+    
     for j, h_x in enumerate(h_x_range):
         app_eigenvalue, app_eigenstate = eigh(H_app_3rd(h_x, H_0, H_app_1, H_app_2, H_app_3, J));
         for i in range(len(GS_indices)):
@@ -344,9 +346,9 @@ def app_4_eigensystem_general_matrices(GS_indices, GS_energy, h_x_range, J, N, b
 
     H_app_2 = PVQ1 @ EGM_11 @ Q1VP
 
-    H_app_3 = -0.5*PVP @ PVQ1 @ EGM_12 @ Q1VP + PVQ1 @ EGM_11 @ Q1VQ1 @ EGM_11 @ Q1VP - 0.5*PVQ1 @ EGM_12 @ Q1VP @ PVP
-
-    H_app_4 = 0.5*(PVQ1 @ EGM_13 @ Q1VP @ PVP @ PVP + np.transpose(PVQ1 @ EGM_13 @ Q1VP @ PVP @ PVP)) + 1.5*(PVQ1 @ EGM_12 @ Q1VP @ PVQ1 @ EGM_11 @ Q1VP + np.transpose(PVQ1 @ EGM_13 @ Q1VP @ PVP @ PVP)) + 2.*(PVQ1 @ EGM_11 @ Q1VQ1 @ EGM_12 @ Q1VP @ PVP + np.transpose(PVQ1 @ EGM_11 @ Q1VQ1 @ EGM_12 @ Q1VP @ PVP)) + 1.5*(PVP @ PVQ1 @ EGM_11 @ Q1VQ1 @ EGM_12 @ Q1VP + np.transpose(PVP @ PVQ1 @ EGM_11 @ Q1VQ1 @ EGM_12 @ Q1VP)) + 5.*(PVQ1 @ EGM_11 @ Q1VQ2 @ EGM_21 @ Q2VQ1 @ EGM_11 @ Q1VP)
+    H_app_3 = -0.5*(PVP @ PVQ1 @ EGM_12 @ Q1VP + np.transpose(PVP @ PVQ1 @ EGM_12 @ Q1VP)) + PVQ1 @ EGM_11 @ Q1VQ1 @ EGM_11 @ Q1VP
+    
+    H_app_4 = 0.5*(PVQ1 @ EGM_13 @ Q1VP @ PVP @ PVP + np.transpose(PVQ1 @ EGM_13 @ Q1VP @ PVP @ PVP)) - 0.5*(PVQ1 @ EGM_12 @ Q1VP @ PVQ1 @ EGM_11 @ Q1VP + np.transpose(PVQ1 @ EGM_13 @ Q1VP @ PVP @ PVP)) - 1.*(PVQ1 @ EGM_11 @ Q1VQ1 @ EGM_12 @ Q1VP @ PVP + np.transpose(PVQ1 @ EGM_11 @ Q1VQ1 @ EGM_12 @ Q1VP @ PVP)) + 1.*(PVQ1 @ EGM_11 @ Q1VQ2 @ EGM_21 @ Q2VQ1 @ EGM_11 @ Q1VP)
 
     for j, h_x in enumerate(h_x_range):
         app_eigenvalue, app_eigenstate = eigh(H_app_4th(h_x, H_0, H_app_1, H_app_2, H_app_3, H_app_4, J));
@@ -377,7 +379,7 @@ def poly_5(x, b):
     return b*x**5;
 
 def poly_4(x, b):
-    return b*x**4;
+    return b*x**4.;
 
 def poly_3(x, b):
     # third order polynomial
