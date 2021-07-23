@@ -154,23 +154,38 @@ def tfim_analysis_3(L, Jij_seed, h_x_range = np.arange(0, 0.001, 0.00001), PBC =
     if info['isEmpty'] == False:
         judgment, error_classical_GS_index = isWorking(coeff_matrix, perturbation_order)
         info['isWorking'] = bool(judgment)
-        info['order'] = coeff_matrix[error_classical_GS_index, 1]
+        info['error state index'] = error_classical_GS_index
+        info['error order'] = coeff_matrix[error_classical_GS_index, 1]
     else:
         info['isWorking'] = None
         info['order'] = None
+        info['error state index'] = None
 
     # output histogram of exponent (power law fit) y axis = number of instances and x axis = exponent
     # return info dictionary
     return info
 
-isWorking_arr = np.zeros(len(seed_range))
-print('Survey for 5 spin system: J_ij seed for range {}'.format(seed_range))
-for i, seed in enumerate(seed_range):
-    info = tfim_analysis_3(5, seed)
-    if info['isEmpty'] == True and info['isWorking'] != 1.:
-        print('Error: seed {} does not have empty 3rd order matrix yet is not working.'.format(seed))
-        print('The error order is {}'.format(info['order']))
-    isWorking_arr[i] = info['isWorking']
+# define survey function that uses 'analysis' to loop over a certain seed range
+def survey(seed_range, number_of_spin, printOrNot = False):
+    # This function prints out all the info regarding each J_ij instance explicitly as well as returns arrays that store
+    # this info
+    print('Survey for 5 spin system: J_ij seed for range {}'.format(seed_range))
+    if printOrNot:
+        for i, seed in enumerate(seed_range):
+            info = tfim_analysis_3(number_of_spin, seed)
+            if info['isEmpty'] == True and info['isWorking'] != 1.:
+                print('Error: seed {} does not have empty 3rd order matrix yet is not working.'.format(seed))
+                print('The classical ground state causing the error is number {}'.format(info['error state index']))
+                print('The error order is {}'.format(info['order']))
+        return None
+    else:
+        info_arr = []
+        isWorking_arr_num = np.zeros(len(seed_range))
+        for i, seed in enumerate(seed_range):
+            info = tfim_analysis_3(number_of_spin, seed)
+            isWorking_arr_num[i] = info['isWorking']
+            info_arr.append(info)
+        # return an array of all the J_ij seeds for which the 3rd order works
+        isWorking_arr = np.argwhere(isWorking_arr_num == 1.)[:, 0]
+        return isWorking_arr, info_arr
 
-# print out an array of all the J_ij seeds for which the 3rd order works
-survey_3 = np.argwhere(isWorking_arr == 1.)[:, 0]
