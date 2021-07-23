@@ -23,23 +23,24 @@ Work flow:
 import tfim
 import tfim_perturbation
 import numpy as np
-from scipy import optimize
+from scipy.optimize import curve_fit
 
 # range of J_ij seeds
-seed_range = range(10)
+seed_range = range(100)
 
 # define isWorking function
 def isWorking(coeff_matrtix, perturbation_order, criterion = 0.5):
-    isWorking_per_state = np.zeros(len(coeff_matrtix))
-    for i in range(len(coeff_matrtix)):
-        coeff_arr = coeff_matrtix[i]
-        norm = np.linalg.norm(coeff_arr)
-        judging_criterion = 1 - coeff_arr[perturbation_order+1]/norm
-        isWorking_per_state[i] = judging_criterion <= criterion
-    return np.logical_and(isWorking_per_state)
+    isWorking_per_state = np.zeros(len(coeff_matrtix[:,1]))
+    for i, par in enumerate(coeff_matrtix[:,1]):
+        isWorking_per_state[i] = (abs(par - (perturbation_order+1)) <= criterion)
+    return np.prod(isWorking_per_state), np.argwhere(isWorking_per_state == False)
+
+# define power law fitting function
+def power_law(x, A, b):
+    return A*np.power(x, b)
 
 # define analysis function
-def tfim_analysis_3(L, Jij_seed, h_x_range = np.arange(0, 0.001, 0.00001), PBC = True, J = 1):
+def tfim_analysis_3(L, Jij_seed, h_x_range = np.arange(0, 0.001, 0.00001), PBC = True, J = 1, perturbation_order = 3):
 
     #Initialize the output dictionary containing all the information that we want to know about a specific instance
     #   - isEmpty
@@ -81,7 +82,7 @@ def tfim_analysis_3(L, Jij_seed, h_x_range = np.arange(0, 0.001, 0.00001), PBC =
     info['isEmpty'] = np.allclose(H_app_3, np.zeros((len(GS_indices), len(GS_indices))))
 
     # Calculate approximated eigenvalues and eigenstates for range(h_x)
-    app_eigenvalues, app_eigenstates = tfim_perturbation.app_3_eigensystem(GS_indices, GS_energy, h_x_range, J, N,
+    app_eigenvalues, app_eigenstates = tfim_perturbation.app_3_eigensystem_general_matrices(GS_indices, GS_energy, h_x_range, J, N,
                                                                            basis, Jij)
     # Calculate exact eigenvalues and eigenstates for range(h_x)
     exc_eigenvalues, exc_eigenstates = tfim_perturbation.exc_eigensystem(basis, h_x_range, lattice, Energies)
@@ -144,16 +145,32 @@ def tfim_analysis_3(L, Jij_seed, h_x_range = np.arange(0, 0.001, 0.00001), PBC =
     error_array = np.absolute(corrected_exc_eigenvalues - app_eigenvalues)
 
     # Curve fit
-    coeff_matrix = np.zeros((5,len(GS_indices)))
+    coeff_matrix = np.zeros((len(GS_indices), 2))
     for i in range(len(GS_indices)):
-        coeffs = np.polynomial.polynomial.polyfit(h_x_range, error_array[i], 4)
-        coeff_matrix[:, i] = coeffs
+        pars, cov = curve_fit(f = power_law, xdata = h_x_range, ydata = error_array[i])
+        coeff_matrix[i] = pars
 
     # Check to see if 3rd order perturbation is working and store it in the info dictionary
-    info['isWorking'] = isWorking(coeff_matrix, perturbation_order = 3)
+    if info['isEmpty'] == False:
+        judgment, error_classical_GS_index = isWorking(coeff_matrix, perturbation_order)
+        info['isWorking'] = bool(judgment)
+        info['order'] = coeff_matrix[error_classical_GS_index, 1]
+    else:
+        info['isWorking'] = None
+        info['order'] = None
 
+    # output histogram of exponent (power law fit) y axis = number of instances and x axis = exponent
     # return info dictionary
     return info
 
-info = tfim_analysis_3(5, 19)
-print(info)
+isWorking_arr = np.zeros(len(seed_range))
+print('Survey for 5 spin system: J_ij seed for range {}'.format(seed_range))
+for i, seed in enumerate(seed_range):
+    info = tfim_analysis_3(5, seed)
+    if info['isEmpty'] == True and info['isWorking'] != 1.:
+        print('Error: seed {} does not have empty 3rd order matrix yet is not working.'.format(seed))
+        print('The error order is {}'.format(info['order']))
+    isWorking_arr[i] = info['isWorking']
+
+# print out an array of all the J_ij seeds for which the 3rd order works
+survey_3 = np.argwhere(isWorking_arr == 1.)[:, 0]

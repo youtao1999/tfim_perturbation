@@ -73,10 +73,10 @@ def Q_1VQ_1(basis, ES_1_indices, GS_indices, N):
 # a function that take a state index as input and returns all the indices of 
 # excited states that are one hamming distance away from that state
 
-def Q_1VQ_2(basis, ES_1_indices, ES_2_indices, GS_indices, N):
+def Q_1VQ_2(basis, ES_2_indices, ES_1_indices, GS_indices, N):
     #ES_2_indices denotes the indices of all the states that are one Hamming distance away from ES_1_indices
     # QVQ matrix
-    QVQ = np.zeros((len(ES_1_indices), len(ES_2_indices)))
+    QVQ = np.zeros((len(ES_2_indices), len(ES_1_indices)))
     for column, ket in enumerate(ES_2_indices):
         state = basis.state(ket)
         for i in range(N):
@@ -111,3 +111,7 @@ def energy_gap(basis, Jij, input_state_indices, N, GS_energy, exponent):
         energy_gap = GS_energy - tfim_perturbation.state_energy(basis, Jij, state_index)
         energy_gap_matrix[i, i] += 1/(energy_gap**exponent)
     return energy_gap_matrix
+
+def hc(matrix):
+    # helper function for summation between the original matrix and its hermitian conjugate
+    return matrix + np.transpose(matrix)
