@@ -76,7 +76,7 @@ def Q_1VQ_1(basis, ES_1_indices, GS_indices, N):
 def Q_1VQ_2(basis, ES_2_indices, ES_1_indices, GS_indices, N):
     #ES_2_indices denotes the indices of all the states that are one Hamming distance away from ES_1_indices
     # QVQ matrix
-    QVQ = np.zeros((len(ES_2_indices), len(ES_1_indices)))
+    QVQ = np.zeros((len(ES_1_indices), len(ES_2_indices)))
     for column, ket in enumerate(ES_2_indices):
         state = basis.state(ket)
         for i in range(N):

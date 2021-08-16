@@ -41,6 +41,11 @@ def judge(order, array, N):
     if array[np.nonzero(array <= N/2.0)] != []:
         return np.max(array[np.nonzero(array <= N/2.0)]) <= order
 
+def minOrder(order, array, N):
+    # if this function returns true, then this instance is a threshold instance for which our perturbation expansion is non-trivial
+    if array[np.nonzero(array <= N/2.0)] != []:
+        return np.min(array[np.nonzero(array <= N/2.0)]) == order
+    
 ###############################################################################
 
 def state_energy(basis,J,state_index):
@@ -329,7 +334,7 @@ def app_4_eigensystem_general_matrices(GS_indices, GS_energy, h_x_range, J, N, b
     PVQ1 = tfim_matrices.PVQ_1(basis, Jij, GS_indices, ES_1_indices, N, GS_energy)
     Q1VP = np.transpose(PVQ1)
     Q1VQ1 = tfim_matrices.Q_1VQ_1(basis, ES_1_indices, GS_indices, N)
-    Q1VQ2 = tfim_matrices.Q_1VQ_2(basis, ES_1_indices, ES_2_indices, GS_indices, N)
+    Q1VQ2 = tfim_matrices.Q_1VQ_2(basis, ES_2_indices, ES_1_indices, GS_indices, N)
     Q2VQ1 = np.transpose(Q1VQ2)
 
     # energy_gap_matrix_12 (EGM) denotes 1/(E_0-QH_0Q)^2 from Q1 to Q1
@@ -348,7 +353,7 @@ def app_4_eigensystem_general_matrices(GS_indices, GS_energy, h_x_range, J, N, b
 
     H_app_3 = -0.5*(PVP @ PVQ1 @ EGM_12 @ Q1VP + np.transpose(PVP @ PVQ1 @ EGM_12 @ Q1VP)) + PVQ1 @ EGM_11 @ Q1VQ1 @ EGM_11 @ Q1VP
     
-    H_app_4 = 0.5*(PVQ1 @ EGM_13 @ Q1VP @ PVP @ PVP + np.transpose(PVQ1 @ EGM_13 @ Q1VP @ PVP @ PVP)) - 0.5*(PVQ1 @ EGM_12 @ Q1VP @ PVQ1 @ EGM_11 @ Q1VP + np.transpose(PVQ1 @ EGM_13 @ Q1VP @ PVP @ PVP)) - 1.*(PVQ1 @ EGM_11 @ Q1VQ1 @ EGM_12 @ Q1VP @ PVP + np.transpose(PVQ1 @ EGM_11 @ Q1VQ1 @ EGM_12 @ Q1VP @ PVP)) + 1.*(PVQ1 @ EGM_11 @ Q1VQ2 @ EGM_21 @ Q2VQ1 @ EGM_11 @ Q1VP)
+    H_app_4 = 0.5*(tfim_matrices.hc(PVQ1 @ EGM_13 @ Q1VP @ PVP @ PVP)) - 0.5*(tfim_matrices.hc(PVQ1 @ EGM_12 @ Q1VP @ PVQ1 @ EGM_11 @ Q1VP)) - 1.*(tfim_matrices.hc(PVQ1 @ EGM_11 @ Q1VQ1 @ EGM_12 @ Q1VP @ PVP)) + 1.*(PVQ1 @ EGM_11 @ Q1VQ2 @ EGM_21 @ Q2VQ1 @ EGM_11 @ Q1VP)
 
     for j, h_x in enumerate(h_x_range):
         app_eigenvalue, app_eigenstate = eigh(H_app_4th(h_x, H_0, H_app_1, H_app_2, H_app_3, H_app_4, J));

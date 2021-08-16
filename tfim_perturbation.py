@@ -41,6 +41,11 @@ def judge(order, array, N):
     if array[np.nonzero(array <= N/2.0)] != []:
         return np.max(array[np.nonzero(array <= N/2.0)]) <= order
 
+def minOrder(order, array, N):
+    # if this function returns true, then this instance is a threshold instance for which our perturbation expansion is non-trivial
+    if array[np.nonzero(array <= N/2.0)] != []:
+        return np.min(array[np.nonzero(array <= N/2.0)]) == order
+    
 ###############################################################################
 
 def state_energy(basis,J,state_index):
@@ -329,7 +334,7 @@ def app_4_eigensystem_general_matrices(GS_indices, GS_energy, h_x_range, J, N, b
     PVQ1 = tfim_matrices.PVQ_1(basis, Jij, GS_indices, ES_1_indices, N, GS_energy)
     Q1VP = np.transpose(PVQ1)
     Q1VQ1 = tfim_matrices.Q_1VQ_1(basis, ES_1_indices, GS_indices, N)
-    Q1VQ2 = tfim_matrices.Q_1VQ_2(basis, ES_1_indices, ES_2_indices, GS_indices, N)
+    Q1VQ2 = tfim_matrices.Q_1VQ_2(basis, ES_2_indices, ES_1_indices, GS_indices, N)
     Q2VQ1 = np.transpose(Q1VQ2)
 
     # energy_gap_matrix_12 (EGM) denotes 1/(E_0-QH_0Q)^2 from Q1 to Q1

@@ -26,7 +26,7 @@ import numpy as np
 from scipy.optimize import curve_fit
 
 # range of J_ij seeds
-seed_range = range(100)
+seed_range = range(10)
 
 # define isWorking function
 def isWorking(coeff_matrtix, perturbation_order, criterion = 0.5):
@@ -40,13 +40,13 @@ def power_law(x, A, b):
     return A*np.power(x, b)
 
 # define analysis function
-def tfim_analysis_3(L, Jij_seed, h_x_range = np.arange(0, 0.001, 0.00001), PBC = True, J = 1, perturbation_order = 3):
-
+def tfim_analysis(L, Jij_seed, perturbation_order, h_x_range = np.arange(0, 0.005, 0.0001), PBC = True, J = 1):
     #Initialize the output dictionary containing all the information that we want to know about a specific instance
     #   - isEmpty
     #   - isWorking
     #   both of which contains logical True or False values
 
+    #Initial set up
     info = {}
     # Configure the number of spins to the correct format for analysis
     L = [L]
@@ -65,24 +65,21 @@ def tfim_analysis_3(L, Jij_seed, h_x_range = np.arange(0, 0.001, 0.00001), PBC =
     Energies = -tfim.JZZ_SK_ME(basis, Jij)
     # for index in range(2 ** N):
     #     print(index, basis.state(index), Energies[index])
-
-    # Build 3rd order approximated matrix
-
     GS_energy, GS_indices = tfim_perturbation.GS(Energies)
 
-    H_app_0 = tfim_perturbation.H_app_0(GS_energy, GS_indices)
-
-    H_app_1 = tfim_perturbation.H_app_1(basis, GS_indices, N)
-
-    H_app_2 = tfim_perturbation.H_app_2(basis, Jij, GS_indices, N, GS_energy)
-
-    H_app_3 = tfim_perturbation.H_app_3(basis, Jij, GS_indices, N, GS_energy)
-
-    # Check to see if H_app_3 is empty and store this information in "info"
-    info['isEmpty'] = np.allclose(H_app_3, np.zeros((len(GS_indices), len(GS_indices))))
+    # Specify perturbation order
+    if perturbation_order == 3:
+        analysis_func = tfim_perturbation.app_3_eigensystem_general_matrices
+        H_app_3 = tfim_perturbation.H_app_3(basis, Jij, GS_indices, N, GS_energy)
+        isEmpty = np.allclose(H_app_3, np.zeros((len(GS_indices), len(GS_indices))))
+    elif perturbation_order == 4:
+        analysis_func = tfim_perturbation.app_4_eigensystem_general_matrices
+        isEmpty = False
+    # Check to see if the max order perturbative term is empty and store this information in "info"
+    info['isEmpty'] = isEmpty
 
     # Calculate approximated eigenvalues and eigenstates for range(h_x)
-    app_eigenvalues, app_eigenstates = tfim_perturbation.app_3_eigensystem_general_matrices(GS_indices, GS_energy, h_x_range, J, N,
+    app_eigenvalues, app_eigenstates = analysis_func(GS_indices, GS_energy, h_x_range, J, N,
                                                                            basis, Jij)
     # Calculate exact eigenvalues and eigenstates for range(h_x)
     exc_eigenvalues, exc_eigenstates = tfim_perturbation.exc_eigensystem(basis, h_x_range, lattice, Energies)
@@ -150,7 +147,7 @@ def tfim_analysis_3(L, Jij_seed, h_x_range = np.arange(0, 0.001, 0.00001), PBC =
         pars, cov = curve_fit(f = power_law, xdata = h_x_range, ydata = error_array[i])
         coeff_matrix[i] = pars
 
-    # Check to see if 3rd order perturbation is working and store it in the info dictionary
+    # Check to see if perturbation is working and store it in the info dictionary
     if info['isEmpty'] == False:
         judgment, error_classical_GS_index = isWorking(coeff_matrix, perturbation_order)
         info['isWorking'] = bool(judgment)
@@ -158,21 +155,20 @@ def tfim_analysis_3(L, Jij_seed, h_x_range = np.arange(0, 0.001, 0.00001), PBC =
         info['error order'] = coeff_matrix[error_classical_GS_index, 1]
     else:
         info['isWorking'] = None
-        info['order'] = None
+        info['error order'] = None
         info['error state index'] = None
 
-    # output histogram of exponent (power law fit) y axis = number of instances and x axis = exponent
     # return info dictionary
-    return info
+    return info, coeff_matrix[:, 1]
 
 # define survey function that uses 'analysis' to loop over a certain seed range
-def survey(seed_range, number_of_spin, printOrNot = False):
+def survey(seed_range, number_of_spin, perturbation_order, printOrNot = False):
     # This function prints out all the info regarding each J_ij instance explicitly as well as returns arrays that store
     # this info
     print('Survey for 5 spin system: J_ij seed for range {}'.format(seed_range))
     if printOrNot:
         for i, seed in enumerate(seed_range):
-            info = tfim_analysis_3(number_of_spin, seed)
+            info, error_orders= tfim_analysis(number_of_spin, seed, perturbation_order)
             if info['isEmpty'] == True and info['isWorking'] != 1.:
                 print('Error: seed {} does not have empty 3rd order matrix yet is not working.'.format(seed))
                 print('The classical ground state causing the error is number {}'.format(info['error state index']))
@@ -182,10 +178,18 @@ def survey(seed_range, number_of_spin, printOrNot = False):
         info_arr = []
         isWorking_arr_num = np.zeros(len(seed_range))
         for i, seed in enumerate(seed_range):
-            info = tfim_analysis_3(number_of_spin, seed)
+            info, error_orders = tfim_analysis(number_of_spin, seed, perturbation_order)
             isWorking_arr_num[i] = info['isWorking']
             info_arr.append(info)
         # return an array of all the J_ij seeds for which the 3rd order works
         isWorking_arr = np.argwhere(isWorking_arr_num == 1.)[:, 0]
         return isWorking_arr, info_arr
 
+def histogram(seed_range, number_of_spin, perturbation_order):
+    err_order_hist = np.array([])
+    for i, seed in enumerate(seed_range):
+        info, error_orders = tfim_analysis(number_of_spin, seed, perturbation_order)
+        if not info['isEmpty']:
+            err_order_hist = np.append(err_order_hist, error_orders)
+    # err_order_hist, bin_edges = np.histogram(err_order_hist, density=True)
+    return err_order_hist
