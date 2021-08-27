@@ -6,19 +6,9 @@
     --Build first and second order approximated matrices using perturbation theory
     --Requires: numpy, scipy.sparse, scipy.linalg, progressbar
 """
-import tfim
-import tfim_matrices
+import tfim_perturbation.tfim_matrices as tfim_matrices
 import numpy as np
-from scipy import sparse
-from scipy.sparse import linalg as spla
-from scipy import linalg
 from scipy.linalg import eigh
-import matplotlib.pyplot as plt
-from scipy import optimize
-import progressbar
-import argparse
-import os
-
 ###############################################################################
 
 # To be used in tfim_search:
@@ -185,6 +175,10 @@ def H_app_3(basis, Jij, GS_indices, N, GS_energy):
             basis.flip(state_0, i)
     return H_app_3
 
+def H_app_1st(h_x, H_0, V, J):
+    # Calculate final 1st order
+    return H_0 - h_x*V
+
 def H_app_2nd(h_x, H_0, V, H_2, J):
     # Calculate final 2nd order approximated matrix
     c_2 = h_x**2
@@ -223,6 +217,22 @@ def H_exact(h_x, V_exact, H_0_exact):
 
 ###############################################################################
 
+def app_1_eigensystem(GS_indices, GS_energy, h_x_range, J, N, basis, Jij):
+    # Calculate approximated eigenvalues and eigenstates for range(h_x)
+    app_eigenvalues = np.zeros((len(GS_indices), len(h_x_range)))
+    app_eigenstates = np.zeros((len(h_x_range), len(GS_indices), len(GS_indices)))
+
+    H_0 = H_app_0(GS_energy, GS_indices)
+    V = H_app_1(basis, GS_indices, N)
+
+    for j, h_x in enumerate(h_x_range):
+        app_eigenvalue, app_eigenstate = np.linalg.eigh(H_app_1st(h_x, H_0, V, J));
+        for i in range(len(GS_indices)):
+            app_eigenvalues[i][j] = app_eigenvalue[i]
+            for k in range(len(GS_indices)):
+                app_eigenstates[j][i][k] = app_eigenstate[i][k]
+    return app_eigenvalues, app_eigenstates, V
+
 def app_2_eigensystem(GS_indices, GS_energy, h_x_range, J, N, basis, Jij):
     # Calculate approximated eigenvalues and eigenstates for range(h_x)
     app_eigenvalues = np.zeros((len(GS_indices), len(h_x_range)))
@@ -238,7 +248,7 @@ def app_2_eigensystem(GS_indices, GS_energy, h_x_range, J, N, basis, Jij):
             app_eigenvalues[i][j] = app_eigenvalue[i]
             for k in range(len(GS_indices)):
                 app_eigenstates[j][i][k] = app_eigenstate[i][k]
-    return app_eigenvalues, app_eigenstates
+    return app_eigenvalues, app_eigenstates, H_2
 
 def app_2_eigensystem_general_matrices(GS_indices, GS_energy, h_x_range, J, N, basis, Jij):
     # Calculate approximated eigenvalues and eigenstates for range(h_x)
@@ -266,7 +276,7 @@ def app_2_eigensystem_general_matrices(GS_indices, GS_energy, h_x_range, J, N, b
             app_eigenvalues[i][j] = app_eigenvalue[i]
             for k in range(len(GS_indices)):
                 app_eigenstates[j][i][k] = app_eigenstate[i][k]
-    return app_eigenvalues, app_eigenstates
+    return app_eigenvalues, app_eigenstates, H_app_2
 
 def app_3_eigensystem(GS_indices, GS_energy, h_x_range, J, N, basis, Jij):
     # Calculate approximated eigenvalues and eigenstates for range(h_x)
@@ -284,7 +294,7 @@ def app_3_eigensystem(GS_indices, GS_energy, h_x_range, J, N, basis, Jij):
             app_eigenvalues[i][j] = app_eigenvalue[i]
             for k in range(len(GS_indices)):
                 app_eigenstates[j][i][k] = app_eigenstate[i][k]
-    return app_eigenvalues, app_eigenstates
+    return app_eigenvalues, app_eigenstates, H_3
 
 def app_3_eigensystem_general_matrices(GS_indices, GS_energy, h_x_range, J, N, basis, Jij):
     # Calculate approximated eigenvalues and eigenstates for range(h_x)
@@ -318,7 +328,7 @@ def app_3_eigensystem_general_matrices(GS_indices, GS_energy, h_x_range, J, N, b
             app_eigenvalues[i][j] = app_eigenvalue[i]
             for k in range(len(GS_indices)):
                 app_eigenstates[j][i][k] = app_eigenstate[i][k]
-    return app_eigenvalues, app_eigenstates
+    return app_eigenvalues, app_eigenstates, H_app_3
 
 def app_4_eigensystem_general_matrices(GS_indices, GS_energy, h_x_range, J, N, basis, Jij):
     # Calculate approximated eigenvalues and eigenstates for range(h_x)
@@ -361,7 +371,7 @@ def app_4_eigensystem_general_matrices(GS_indices, GS_energy, h_x_range, J, N, b
             app_eigenvalues[i][j] = app_eigenvalue[i]
             for k in range(len(GS_indices)):
                 app_eigenstates[j][i][k] = app_eigenstate[i][k]
-    return app_eigenvalues, app_eigenstates
+    return app_eigenvalues, app_eigenstates, H_app_4
 
 def exc_eigensystem(basis, h_x_range, lattice, Energies):
     # Calculate exact eigenvalues and eigenstates for range(h_x)

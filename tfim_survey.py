@@ -20,8 +20,8 @@ Work flow:
     arbitrarily specified threshold.
 '''
 
-import tfim
-import tfim_perturbation
+import tfim_perturbation.tfim as tfim
+import tfim_perturbation.tfim_perturbation as perturbation
 import numpy as np
 from scipy.optimize import curve_fit
 import networkx as nx
@@ -66,24 +66,17 @@ def tfim_analysis(L, Jij_seed, perturbation_order, h_x_range = np.arange(0, 0.00
     Energies = -tfim.JZZ_SK_ME(basis, Jij)
     # for index in range(2 ** N):
     #     print(index, basis.state(index), Energies[index])
-    GS_energy, GS_indices = tfim_perturbation.GS(Energies)
+    GS_energy, GS_indices = perturbation.GS(Energies)
 
-    # Specify perturbation order
-    if perturbation_order == 3:
-        analysis_func = tfim_perturbation.app_3_eigensystem_general_matrices
-        H_app_3 = tfim_perturbation.H_app_3(basis, Jij, GS_indices, N, GS_energy)
-        isEmpty = np.allclose(H_app_3, np.zeros((len(GS_indices), len(GS_indices))))
-    elif perturbation_order == 4:
-        analysis_func = tfim_perturbation.app_4_eigensystem_general_matrices
-        isEmpty = False
-    # Check to see if the max order perturbative term is empty and store this information in "info"
-    info['isEmpty'] = isEmpty
+    # determine analysis function according to perturbation order
+    analysis_func_dict = {1: perturbation.app_1_eigensystem, 2: perturbation.app_2_eigensystem, 3: perturbation.app_3_eigensystem_general_matrices, 4: perturbation.app_4_eigensystem_general_matrices}
+    analysis_func = analysis_func_dict[perturbation_order]
 
     # Calculate approximated eigenvalues and eigenstates for range(h_x)
-    app_eigenvalues, app_eigenstates = analysis_func(GS_indices, GS_energy, h_x_range, J, N,
+    app_eigenvalues, app_eigenstates, highest_order_Hamiltonian = analysis_func(GS_indices, GS_energy, h_x_range, J, N,
                                                                            basis, Jij)
     # Calculate exact eigenvalues and eigenstates for range(h_x)
-    exc_eigenvalues, exc_eigenstates = tfim_perturbation.exc_eigensystem(basis, h_x_range, lattice, Energies)
+    exc_eigenvalues, exc_eigenstates = perturbation.exc_eigensystem(basis, h_x_range, lattice, Energies)
 
     # Extract exact ground states
     exc_GS_eigenstates = np.zeros((len(h_x_range), len(GS_indices), len(GS_indices)))
@@ -106,7 +99,7 @@ def tfim_analysis(L, Jij_seed, perturbation_order, h_x_range = np.arange(0, 0.00
                 for v1 in [reordered_app_eigenstates[h_x_index - 1, :, 2 * k],
                            reordered_app_eigenstates[h_x_index - 1, :, 2 * k + 1]]:
                     for v2 in [app_eigenstates[h_x_index, :, 2 * k], app_eigenstates[h_x_index, :, 2 * k + 1]]:
-                        fidelity_array = np.append(fidelity_array, tfim_perturbation.fidelity(v1, v2))
+                        fidelity_array = np.append(fidelity_array, perturbation.fidelity(v1, v2))
                 if abs(fidelity_array[0] - max(fidelity_array)) < epsilon:
                     reordered_app_eigenstates[h_x_index, :, 2 * k] = app_eigenstates[h_x_index, :, 2 * k]
                     reordered_app_eigenstates[h_x_index, :, 2 * k + 1] = app_eigenstates[h_x_index, :, 2 * k + 1]
@@ -126,7 +119,7 @@ def tfim_analysis(L, Jij_seed, perturbation_order, h_x_range = np.arange(0, 0.00
                 for v1 in [reordered_exc_GS_eigenstates[h_x_index - 1, :, 2 * k],
                            reordered_exc_GS_eigenstates[h_x_index - 1, :, 2 * k + 1]]:
                     for v2 in [exc_GS_eigenstates[h_x_index, :, 2 * k], exc_GS_eigenstates[h_x_index, :, 2 * k + 1]]:
-                        fidelity_array = np.append(fidelity_array, tfim_perturbation.fidelity(v1, v2))
+                        fidelity_array = np.append(fidelity_array, perturbation.fidelity(v1, v2))
                 if abs(fidelity_array[0] - max(fidelity_array)) < epsilon:
                     reordered_exc_GS_eigenstates[h_x_index, :, 2 * k] = exc_GS_eigenstates[h_x_index, :, 2 * k]
                     reordered_exc_GS_eigenstates[h_x_index, :, 2 * k + 1] = exc_GS_eigenstates[h_x_index, :, 2 * k + 1]
@@ -149,6 +142,9 @@ def tfim_analysis(L, Jij_seed, perturbation_order, h_x_range = np.arange(0, 0.00
         coeff_matrix[i] = pars
 
     # Check to see if perturbation is working and store it in the info dictionary
+
+    info['isEmpty'] = np.allclose(highest_order_Hamiltonian, np.zeros((len(GS_indices), len(GS_indices))))
+
     if info['isEmpty'] == False:
         judgment, error_classical_GS_index = isWorking(coeff_matrix, perturbation_order)
         info['isWorking'] = bool(judgment)
@@ -227,7 +223,7 @@ def min_perturbation_order(GS_indices, basis):
         return output
 
     # Calculate its Hamming_matrix
-    Hamming_matrix = tfim_perturbation.Hamming_array(GS_indices, basis)
+    Hamming_matrix = perturbation.Hamming_array(GS_indices, basis)
 
     # Construct graph
     G = nx.Graph()
