@@ -6,7 +6,7 @@
     --Build first and second order approximated matrices using perturbation theory
     --Requires: numpy, scipy.sparse, scipy.linalg, progressbar
 """
-import tfim_perturbation.tfim_matrices as tfim_matrices
+import tfim_matrices as tfim_matrices
 import numpy as np
 from scipy.linalg import eigh
 ###############################################################################
