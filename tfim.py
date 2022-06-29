@@ -93,7 +93,7 @@ class Lattice:
             if i == 0:
                 if self.PBC:
                     is_left = True
-                    left_NN = L - 1
+                    left_NN = self.L - 1
                 else:
                     is_left = False
             else:
