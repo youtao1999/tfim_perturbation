@@ -10,6 +10,8 @@ import tfim_matrices as tfim_matrices
 import numpy as np
 from scipy.linalg import eigh
 from scipy import sparse
+from scipy.sparse import linalg as spla
+
 
 ###############################################################################
 
@@ -528,3 +530,135 @@ def fidelity_array(GS_indices, h_x_range, GS_exc_eigenvalues, app_eigenvalues, e
 
 def infidelity_array(fidelity_array):
     return 1 - fidelity_array
+
+
+# building 2D NN Jij matrices
+def Jij_2D_NN(seed, N, PBC, xwidth, yheight, lattice):
+    def bond_list(seed, N, PBC, xwidth, yheight):
+        np.random.seed(seed)
+        # Generates a random list of bonds with equal numbers of ferromagnetic and antiferromagnetic bonds
+        if PBC == True:
+            num_of_bonds = 2 * N
+        else:
+            num_of_bonds = (xwidth - 1) * (yheight) + (xwidth) * (yheight - 1)
+        if num_of_bonds % 2 == 0:
+            a1 = [-1 for i in range(num_of_bonds // 2)]
+        else:
+            a1 = [-1 for i in range((num_of_bonds // 2) + 1)]
+        a2 = [1 for i in range(num_of_bonds // 2)]
+        a = list(np.random.permutation(a1 + a2))
+        return a
+
+    def make_Jij(N, b_list, lattice):
+        # Goes through the list of bonds to make the jij matrix that tells you how all of the spins are bonded to each other
+
+        bond_index = 0
+        Jij = np.zeros((N, N))
+        for i in range(0, N):
+            NNs = lattice.NN(i)
+            for j in NNs:
+                if Jij[i][j] == 0:
+                    Jij[i][j] = b_list[bond_index]
+                    Jij[j][i] = b_list[bond_index]
+                    bond_index += 1
+        return Jij
+
+    b_list = bond_list(seed, N, PBC, xwidth, yheight)
+
+    def Jij_convert(Jij, N):
+        new = np.zeros((N // 2, N))
+        for j in range(0, N):  # columns
+            count = 0
+            while count < N // 2:
+                if j < N // 2:
+                    # make i at the index J be N-1
+                    subtract = 1
+                    for i in range(j, N // 2):
+                        new[i][j] = Jij[j][N - subtract]
+                        subtract += 1
+                        count += 1
+                        if count == N // 2:
+                            break
+                i = j
+                start = 0
+                while i > N // 2:
+                    i -= 1
+                    start += 1
+                for q in range(0, N // 2):
+                    new[i - 1][j] = Jij[j][q + start]
+                    count += 1
+                    i -= 1
+                    if i <= 0:
+                        break
+        return new
+
+    Jij = make_Jij(N, b_list, lattice)
+
+    return Jij_convert(Jij, N)
+
+def susceptibility(h_x_range, lattice, basis, exc_eigenvalues, H_0_exc, V_exc, v0, h_z):
+    order_param_matrix = np.zeros((len(h_x_range), lattice.N))
+    chi_aa_matrix = np.zeros((len(h_x_range), lattice.N))
+    E1_arr = np.zeros(len(h_x_range))
+    for i, h_x in enumerate(h_x_range):
+        for a in range(lattice.N):
+            sigma_z = np.zeros(basis.M)
+            for ket in range(basis.M):
+                state = basis.state(ket)
+                if state[a] == 1:
+                    sigma_z[ket] += 1
+                else:
+                    sigma_z[ket] -= 1
+            E0 = exc_eigenvalues[i]
+            E1 = spla.eigsh(H_0_exc - V_exc.multiply(h_x) - h_z * sparse.diags(sigma_z), k=1, which='SA', v0=v0, maxiter=200,
+                       return_eigenvectors=False)[0]
+            E2 = spla.eigsh(H_0_exc - V_exc.multiply(h_x) - 2. * h_z * sparse.diags(sigma_z), k=1, which='SA', v0=v0,
+                            maxiter=200, return_eigenvectors=False)[0]
+            E1_arr[i] = E1
+            order_param_matrix[i, a] = (E2 - 4. * E1 + 3. * E0) / (-2. * h_z)
+            chi_aa = 2 * (E2 - 2. * E1 + E0) / (2 * h_z ** 2.)
+            chi_aa_matrix[i, a] = chi_aa
+
+    chi_ab_matrix = np.zeros((len(h_x_range), basis.N, basis.N))
+    for i, h_x in enumerate(h_x_range):
+        for a in range(lattice.N):
+            sigma_z_a = np.zeros(basis.M)
+            for ket in range(basis.M):
+                state = basis.state(ket)
+                if state[a] == 1:
+                    sigma_z_a[ket] += 1
+                else:
+                    sigma_z_a[ket] -= 1
+            for b in range(a + 1, lattice.N, 1):
+                sigma_z_b = np.zeros(basis.M)
+                for ket in range(basis.M):
+                    state = basis.state(ket)
+                    if state[b] == 1:
+                        sigma_z_b[ket] = 1
+                    else:
+                        sigma_z_b[ket] = 1
+                H1 = H_0_exc - V_exc.multiply(h_x) - (sparse.diags(sigma_z_a) + sparse.diags(sigma_z_b)).multiply(h_z)
+                H2 = H_0_exc - V_exc.multiply(h_x) - (sparse.diags(sigma_z_a) + sparse.diags(sigma_z_b)).multiply(
+                    2. * h_z)
+                E0 = exc_eigenvalues[i]
+                E1 = spla.eigsh(H_0_exc - V_exc.multiply(h_x) - h_z * sparse.diags(sigma_z), k=1, which='SA', v0=v0,
+                                maxiter=200, return_eigenvectors=False)[0]
+                E2 = \
+                spla.eigsh(H_0_exc - V_exc.multiply(h_x) - 2. * h_z * sparse.diags(sigma_z), k=1, which='SA', v0=v0,
+                           maxiter=200, return_eigenvectors=False)[0]
+                chi_ab = (E2 - 2. * E1 + E0) / (2 * (h_z ** 2.)) - 0.5 * (chi_aa_matrix[i, a] + chi_aa_matrix[i, b])
+                chi_ab_matrix[i, a, b] = chi_ab
+                chi_ab_matrix[i, b, a] = chi_ab
+                # adding the diagonal elements
+                for c in range(lattice.N):
+                    chi_ab_matrix[i, c, c] = chi_aa_matrix[i, c]
+
+    chi_arr = np.zeros(len(h_x_range))
+    for i, h_x in enumerate(h_x_range):
+        chi_arr[i] += np.sum(chi_ab_matrix[i])
+
+    order_param_arr = np.zeros(len(h_x_range))
+    for i, h_x in enumerate(h_x_range):
+        order_param_arr[i] += np.sum(abs(order_param_matrix[i]))
+
+    return chi_arr, order_param_arr

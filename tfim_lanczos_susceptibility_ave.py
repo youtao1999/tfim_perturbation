@@ -39,75 +39,6 @@ def exc_eigensystem(basis, h_x_range, lattice, Energies):
             exc_eigenstates[j][k] = exc_eigenstate[k, 0]
     return V_exc_csr, H_0_exc_csr, exc_eigenvalues, first_excited_exc_energies, exc_eigenstates
 
-
-def susceptibility(GS_indices, h_x_range, lattice, basis, app_eigenvalues, H_0_exc, V_exc, h_z):
-    order_param_matrix = np.zeros((len(h_x_range), lattice.N))
-    chi_aa_matrix = np.zeros((len(h_x_range), lattice.N))
-    E1_arr = np.zeros(len(h_x_range))
-    for i, h_x in enumerate(h_x_range):
-        for a in range(lattice.N):
-            sigma_z = np.zeros(basis.M)
-            for ket in range(basis.M):
-                state = basis.state(ket)
-                if state[a] == 1:
-                    sigma_z[ket] += 1
-                else:
-                    sigma_z[ket] -= 1
-            E0 = exc_eigenvalues[i]
-            E1 = spla.eigsh(H_0_exc - V_exc.multiply(h_x) - h_z * sparse.diags(sigma_z), k=1, which='SA', v0=v0, maxiter=200,
-                       return_eigenvectors=False)[0]
-            E2 = spla.eigsh(H_0_exc - V_exc.multiply(h_x) - 2. * h_z * sparse.diags(sigma_z), k=1, which='SA', v0=v0,
-                            maxiter=200, return_eigenvectors=False)[0]
-            E1_arr[i] = E1
-            order_param_matrix[i, a] = (E2 - 4. * E1 + 3. * E0) / (-2. * h_z)
-            chi_aa = 2 * (E2 - 2. * E1 + E0) / (2 * h_z ** 2.)
-            chi_aa_matrix[i, a] = chi_aa
-
-    chi_ab_matrix = np.zeros((len(h_x_range), basis.N, basis.N))
-    for i, h_x in enumerate(h_x_range):
-        for a in range(lattice.N):
-            sigma_z_a = np.zeros(basis.M)
-            for ket in range(basis.M):
-                state = basis.state(ket)
-                if state[a] == 1:
-                    sigma_z_a[ket] += 1
-                else:
-                    sigma_z_a[ket] -= 1
-            for b in range(a + 1, lattice.N, 1):
-                sigma_z_b = np.zeros(basis.M)
-                for ket in range(basis.M):
-                    state = basis.state(ket)
-                    if state[b] == 1:
-                        sigma_z_b[ket] = 1
-                    else:
-                        sigma_z_b[ket] = 1
-                H1 = H_0_exc - V_exc.multiply(h_x) - (sparse.diags(sigma_z_a) + sparse.diags(sigma_z_b)).multiply(h_z)
-                H2 = H_0_exc - V_exc.multiply(h_x) - (sparse.diags(sigma_z_a) + sparse.diags(sigma_z_b)).multiply(
-                    2. * h_z)
-                E0 = exc_eigenvalues[i]
-                E1 = spla.eigsh(H_0_exc - V_exc.multiply(h_x) - h_z * sparse.diags(sigma_z), k=1, which='SA', v0=v0,
-                                maxiter=200, return_eigenvectors=False)[0]
-                E2 = \
-                spla.eigsh(H_0_exc - V_exc.multiply(h_x) - 2. * h_z * sparse.diags(sigma_z), k=1, which='SA', v0=v0,
-                           maxiter=200, return_eigenvectors=False)[0]
-                chi_ab = (E2 - 2. * E1 + E0) / (2 * (h_z ** 2.)) - 0.5 * (chi_aa_matrix[i, a] + chi_aa_matrix[i, b])
-                chi_ab_matrix[i, a, b] = chi_ab
-                chi_ab_matrix[i, b, a] = chi_ab
-                # adding the diagonal elements
-                for c in range(lattice.N):
-                    chi_ab_matrix[i, c, c] = chi_aa_matrix[i, c]
-
-    chi_arr = np.zeros(len(h_x_range))
-    for i, h_x in enumerate(h_x_range):
-        chi_arr[i] += np.sum(chi_ab_matrix[i])
-
-    order_param_arr = np.zeros(len(h_x_range))
-    for i, h_x in enumerate(h_x_range):
-        order_param_arr[i] += np.sum(abs(order_param_matrix[i]))
-
-    return chi_arr, order_param_arr
-
-
 num_iter = 1
 chi_arr_all = np.zeros((num_iter, len(h_x_range)))
 order_param_all = np.zeros((num_iter, len(h_x_range)))
@@ -121,10 +52,8 @@ for i in range(num_iter):
     Jij = tfim_perturbation.Jij_2D_NN(seed, N, PBC, L[0], L[1], lattice)
     Energies = -tfim.JZZ_SK_ME(basis, Jij)
     GS_energy, GS_indices = tfim_perturbation.GS(Energies)
-    V_exc, H_0_exc, exc_eigenvalues, first_excited__exc_energies, exc_eigenstates = exc_eigensystem(basis, h_x_range,
-                                                                                                    lattice, Energies)
-    chi_arr, order_param_arr = susceptibility(GS_indices, h_x_range, lattice, basis, exc_eigenvalues, H_0_exc, V_exc,
-                                              h_z=0.001)
+    V_exc, H_0_exc, exc_eigenvalues, first_excited__exc_energies, exc_eigenstates = exc_eigensystem(basis, h_x_range, lattice, Energies)
+    chi_arr, order_param_arr = tfim_perturbation.susceptibility(h_x_range, lattice, basis, exc_eigenvalues, H_0_exc, V_exc, v0, h_z = 0.001)
     chi_arr_all[i] = chi_arr
     order_param_all[i] = order_param_arr
 
