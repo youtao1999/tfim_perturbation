@@ -9,11 +9,11 @@ import matplotlib.pyplot as pl
 import matplotlib.ticker as mtick
 import os
 
-N = 16
+N = 4
 
-os.chdir("../")
-os.chdir('lanczos_diag_data')
-table = np.loadtxt("lanczos_diagonalization data_[4, 4].txt")
+# os.chdir("../")
+os.chdir('lanczos_ave_data')
+table = np.loadtxt("lanczos_ave data_[3, 3] seed from 2 to 99.txt")
 index_arr = table[: ,0]
 h_x_range = table[:, 1]
 GS_energy_val = table[:, 2]
@@ -72,7 +72,8 @@ pl.tick_params('both', length=7, width=2, which='major')
 pl.tick_params('both', length=5, width=2, which='minor')
 pl.gca().yaxis.set_major_formatter(mtick.FormatStrFormatter('%.6f'))
 pl.grid(False)
-pl.yscale("log")
+# pl.yscale("log")
+pl.ylim((-10, 100))
 pl.legend(loc=0, prop={'size': 16}, numpoints=1, scatterpoints=1, ncol=1)
 fig.tight_layout(pad=0.5)
 # pl.savefig("susceptibility plot")

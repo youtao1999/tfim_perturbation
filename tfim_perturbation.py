@@ -9,6 +9,8 @@
 import tfim_matrices as tfim_matrices
 import numpy as np
 from scipy.linalg import eigh
+from scipy import sparse
+
 ###############################################################################
 
 # To be used in tfim_search:
@@ -386,6 +388,26 @@ def exc_eigensystem(basis, h_x_range, lattice, Energies):
             for k in range(basis.M):
                 exc_eigenstates[j][i][k] = exc_eigenstate[i][k]
     return exc_eigenvalues, exc_eigenstates
+
+# modified exact Hamiltonians using compressed sparse row matrices
+def V_exact_csr(basis, lattice):
+    row = []
+    col = []
+    N = lattice.N
+    for ket in range(basis.M):
+        state = basis.state(ket)
+        for i in range(lattice.N):
+            basis.flip(state, i)
+            bra = basis.index(state)
+            row.append(bra)
+            col.append(ket)
+            basis.flip(state, i)
+    data = np.ones(len(col))
+    V_exact = sparse.csr_matrix((data, (np.array(row), np.array(col))), shape=(2 ** N, 2 ** N))
+    return V_exact
+
+def H_0_exact_csr(Energies):
+    return sparse.diags(Energies)
 
 ###############################################################################
 # For error analysis and curve fit
