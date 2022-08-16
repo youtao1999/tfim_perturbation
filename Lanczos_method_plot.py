@@ -9,11 +9,11 @@ import matplotlib.pyplot as pl
 import matplotlib.ticker as mtick
 import os
 
-N = 4
+N = 16
 
 # os.chdir("../")
 os.chdir('lanczos_ave_data')
-table = np.loadtxt("lanczos_ave data_[3, 3] seed from 2 to 99.txt")
+table = np.loadtxt("lanczos_ave data_[4, 4] seed from 2 to 99.txt")
 index_arr = table[: ,0]
 h_x_range = table[:, 1]
 GS_energy_val = table[:, 2]

@@ -50,5 +50,4 @@ def svd(basis, A, B, v, Compute_UV=True):
 
 ###############################################################################
 def entropy(S):
-    
     return -np.sum( S**2*np.log(S**2) )

@@ -1,14 +1,16 @@
 import tfim
 import tfim_perturbation
 import numpy as np
-from scipy import sparse
 from scipy.sparse import linalg as spla
 import matplotlib.pyplot as pl
 import matplotlib.ticker as mtick
 import time
 
+# start time
+start_time = time.time()
+
 # Initial system specification
-L = [4, 4]
+L = [4,4]
 init = 0.001
 final = 4.
 num_steps = 20
@@ -32,39 +34,55 @@ def exc_eigensystem(basis, h_x_range, lattice, Energies):
     H_0_exc_csr = tfim_perturbation.H_0_exact_csr(Energies)
     for j, h_x in enumerate(h_x_range):
         H = H_0_exc_csr - V_exc_csr.multiply(h_x)
+        before_diag = time.time()
         exc_eigenvalue, exc_eigenstate = spla.eigsh(H, k=2, which="SA", v0=v0, maxiter=400, return_eigenvectors=True)
+        delta_t = time.time() - before_diag
+#        print("{j_val} out of {lenhx} diagonalization steps completed, {time_per_diag} seconds used per diagonalization".format(j_val = j, lenhx = len(h_x_range), time_per_diag = delta_t))
         exc_eigenvalues[j] = exc_eigenvalue[0]
         first_excited_exc_energies[j] = exc_eigenvalue[1]
         for k in range(basis.M):
             exc_eigenstates[j][k] = exc_eigenstate[k, 0]
     return V_exc_csr, H_0_exc_csr, exc_eigenvalues, first_excited_exc_energies, exc_eigenstates
 
-num_iter = 1
+num_iter = 100
 chi_arr_all = np.zeros((num_iter, len(h_x_range)))
 order_param_all = np.zeros((num_iter, len(h_x_range)))
 for i in range(num_iter):
-    seed = int(time.time() * 1000) % num_iter ** 3
-    # initialize Lanczos vector
-    v0 = np.zeros(2 ** N)
-    for i in GS_indices:
-        v0[i] = 1
-    print(seed)
+    seed = int(time.time() * 1000) % 7239
+    print("starting {seed_val}".format(seed_val = seed))
     Jij = tfim_perturbation.Jij_2D_NN(seed, N, PBC, L[0], L[1], lattice)
     Energies = -tfim.JZZ_SK_ME(basis, Jij)
     GS_energy, GS_indices = tfim_perturbation.GS(Energies)
+    # initialize Lanczos vector
+    v0 = np.zeros(2 ** N)
+    for k in GS_indices:
+        v0[k] = 1
     V_exc, H_0_exc, exc_eigenvalues, first_excited__exc_energies, exc_eigenstates = exc_eigensystem(basis, h_x_range, lattice, Energies)
     chi_arr, order_param_arr = tfim_perturbation.susceptibility(h_x_range, lattice, basis, exc_eigenvalues, H_0_exc, V_exc, v0, h_z = 0.001)
-    chi_arr_all[i] = chi_arr
-    order_param_all[i] = order_param_arr
-
+    for j in range(len(h_x_range)):
+        chi_arr_all[i, j] = chi_arr[j]
+        order_param_all[i, j] = order_param_arr[j]
+    print(seed)
+    print(chi_arr)
+    print(order_param_arr)
 chi_arr_ave = np.mean(chi_arr_all, axis=0)
 order_param_ave = np.mean(order_param_all, axis=0)
 
-outF = open("lanczos_susceptibility_ave_{size}.txt".format(size = L), 'w')
-for i, h_x in enumerate(h_x_range):
-    outF.write("{index} {h_x_val} {chi_arr_val} {order_param_val} \n".format(index = i, h_x_val = h_x,  chi_arr_val = chi_arr_ave[i], order_param_val = order_param_ave[i]))
-    # outF.write("{index} {h_x_val} {GS_energy_val} {first_excited_energy_val} {second_derivative_energy_val} {structure_factor_val} \n".format(index = i, h_x_val = h_x, GS_energy_val = exc_eigenvalues[i], first_excited_energy_val = first_excited__exc_energies[i], second_derivative_energy_val = second_derivative_exc_eigenvalues[i], structure_factor_val = S_SG_arr[i]))
-outF.close()
+print("time used: " + str(time.time() - start_time))
+
+outF1 = open("lanczos_susceptibility_ave_{size}.txt".format(size = L), 'w')
+for i in range(num_iter):
+    for j in range(len(h_x_range)):
+        outF1.write("{chi_arr_val} ".format(chi_arr_val = chi_arr_all[i, j]))
+    outF1.write(" \n")
+outF1.close()
+
+outF2 = open("lanczos_order_param_ave_{size}.txt".format(size = L), 'w')
+for i in range(num_iter):
+    for j in range(len(h_x_range)):
+        outF2.write("{order_param_val} ".format(order_param_val = order_param_all[i, j]))
+    outF2.write(" \n")
+outF2.close()
 
 # Susceptibility plot
 fig = pl.figure(figsize=(8, 6))

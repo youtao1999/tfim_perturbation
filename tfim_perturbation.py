@@ -596,6 +596,44 @@ def Jij_2D_NN(seed, N, PBC, xwidth, yheight, lattice):
 
     return Jij_convert(Jij, N)
 
+
+def eight_tile(seed, p):
+    np.random.seed(seed)
+    bond_pos_lst = np.array([[1,6], [1,8], [1,2], [1,4], [2,7],[2,3], [2,5], [3,8], [3,6], [3,4], [4,5], [4,7], [6,7], [8,7], [8,5], [5,6]])
+    i = [np.random.random() for _ in range(np.shape(bond_pos_lst)[0])]
+    a = np.zeros(len(i))
+    for index, prob_seed in enumerate(i):
+        if prob_seed <= p:
+            a[index] += 1
+        else:
+            a[index] -= 1
+    Jij = np.zeros((8,8))
+    for i, pos in enumerate(bond_pos_lst):
+        Jij[pos[0]-1,pos[1]-1] += a[i]
+        Jij[pos[1]-1,pos[0]-1] += a[i]
+        
+    N = 8
+    
+    return Jij, N
+
+def ten_tile(seed, p):
+    np.random.seed(seed)
+    bond_pos_lst = np.array([[1,10], [1,8], [1,2], [1,4], [2,9], [2,3], [2,5], [3,10], [3,4], [3,6], [4,5], [4,7], [5,6], [5,8], [6,7], [6,9], [7,8], [7,10], [8,9], [9,10]])
+    i = [np.random.random() for _ in range(np.shape(bond_pos_lst)[0])]
+    a = np.zeros(len(i))
+    for index, prob_seed in enumerate(i):
+        if prob_seed <= p:
+            a[index] += 1
+        else:
+            a[index] -= 1
+    Jij = np.zeros((10, 10))
+    for i, pos in enumerate(bond_pos_lst):
+        Jij[pos[0]-1,pos[1]-1] += a[i]
+        Jij[pos[1]-1,pos[0]-1] += a[i]
+    N = 10
+    return Jij, N
+
+
 def susceptibility(h_x_range, lattice, basis, exc_eigenvalues, H_0_exc, V_exc, v0, h_z):
     order_param_matrix = np.zeros((len(h_x_range), lattice.N))
     chi_aa_matrix = np.zeros((len(h_x_range), lattice.N))
@@ -641,10 +679,9 @@ def susceptibility(h_x_range, lattice, basis, exc_eigenvalues, H_0_exc, V_exc, v
                 H2 = H_0_exc - V_exc.multiply(h_x) - (sparse.diags(sigma_z_a) + sparse.diags(sigma_z_b)).multiply(
                     2. * h_z)
                 E0 = exc_eigenvalues[i]
-                E1 = spla.eigsh(H_0_exc - V_exc.multiply(h_x) - h_z * sparse.diags(sigma_z), k=1, which='SA', v0=v0,
+                E1 = spla.eigsh(H1, k=1, which='SA', v0=v0,
                                 maxiter=200, return_eigenvectors=False)[0]
-                E2 = \
-                spla.eigsh(H_0_exc - V_exc.multiply(h_x) - 2. * h_z * sparse.diags(sigma_z), k=1, which='SA', v0=v0,
+                E2 = spla.eigsh(H2, k=1, which='SA', v0=v0,
                            maxiter=200, return_eigenvectors=False)[0]
                 chi_ab = (E2 - 2. * E1 + E0) / (2 * (h_z ** 2.)) - 0.5 * (chi_aa_matrix[i, a] + chi_aa_matrix[i, b])
                 chi_ab_matrix[i, a, b] = chi_ab
@@ -662,3 +699,5 @@ def susceptibility(h_x_range, lattice, basis, exc_eigenvalues, H_0_exc, V_exc, v
         order_param_arr[i] += np.sum(abs(order_param_matrix[i]))
 
     return chi_arr, order_param_arr
+
+
